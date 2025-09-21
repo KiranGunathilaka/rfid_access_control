@@ -8,12 +8,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 from sqlalchemy.pool import QueuePool
 from dotenv import load_dotenv
-
-# Serial is optional at import time so the API can still run without it.
-try:
-    import serial  # pyserial
-except Exception:
-    serial = None
+import serial 
 
 # -------------------------------------------------------
 # Config & DB
