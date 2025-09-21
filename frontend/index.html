@@ -3,6 +3,7 @@
 # =======================================================================================
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -13,20 +14,20 @@
             padding: 0;
             box-sizing: border-box;
         }
-        
+
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             line-height: 1.6;
             color: #333;
             background-color: #f4f4f4;
         }
-        
+
         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 20px;
         }
-        
+
         .header {
             background: #2c3e50;
             color: white;
@@ -34,25 +35,25 @@
             margin-bottom: 2rem;
             border-radius: 8px;
         }
-        
+
         .dashboard {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
         }
-        
+
         .card {
             background: white;
             border-radius: 8px;
             padding: 20px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
         }
-        
+
         .card h3 {
             margin-bottom: 15px;
             color: #2c3e50;
         }
-        
+
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -60,11 +61,19 @@
             border-radius: 50%;
             margin-right: 8px;
         }
-        
-        .status-healthy { background-color: #27ae60; }
-        .status-warning { background-color: #f39c12; }
-        .status-error { background-color: #e74c3c; }
-        
+
+        .status-healthy {
+            background-color: #27ae60;
+        }
+
+        .status-warning {
+            background-color: #f39c12;
+        }
+
+        .status-error {
+            background-color: #e74c3c;
+        }
+
         .btn {
             background: #3498db;
             color: white;
@@ -74,39 +83,40 @@
             cursor: pointer;
             margin: 5px;
         }
-        
+
         .btn:hover {
             background: #2980b9;
         }
-        
+
         .btn-danger {
             background: #e74c3c;
         }
-        
+
         .btn-danger:hover {
             background: #c0392b;
         }
-        
+
         table {
             width: 100%;
             border-collapse: collapse;
         }
-        
-        th, td {
+
+        th,
+        td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-        
+
         th {
             background-color: #f8f9fa;
         }
-        
+
         .loading {
             text-align: center;
             color: #666;
         }
-        
+
         .error {
             color: #e74c3c;
             background-color: #fadbd8;
@@ -116,13 +126,14 @@
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
             <h1>🔒 RFID Access Control Dashboard</h1>
             <p>Multi-Gate Architecture Management System</p>
         </div>
-        
+
         <div class="dashboard">
             <!-- System Status Card -->
             <div class="card">
@@ -130,14 +141,14 @@
                 <div id="system-status" class="loading">Loading...</div>
                 <button class="btn" onclick="refreshStatus()">Refresh</button>
             </div>
-            
+
             <!-- Sync Status Card -->
             <div class="card">
                 <h3>Synchronization Status</h3>
                 <div id="sync-status" class="loading">Loading...</div>
                 <button class="btn" onclick="triggerSync()">Trigger Sync</button>
             </div>
-            
+
             <!-- User Management Card -->
             <div class="card">
                 <h3>User Management</h3>
@@ -150,17 +161,19 @@
                     <button class="btn" onclick="viewUsers()">View Users</button>
                 </div>
             </div>
-            
+
             <!-- Recent Activity Card -->
             <div class="card">
                 <h3>Recent Activity</h3>
                 <div id="recent-activity" class="loading">Loading...</div>
             </div>
         </div>
-        
+
         <!-- Modal for Add User -->
-        <div id="userModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
-            <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; min-width: 400px;">
+        <div id="userModal"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000;">
+            <div
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px; border-radius: 8px; min-width: 400px;">
                 <h3>Add New User</h3>
                 <form id="addUserForm">
                     <div style="margin: 10px 0;">
@@ -194,9 +207,9 @@
 
     <script>
         const API_BASE = window.location.origin + '/api';
-        
+
         // Load initial data
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             refreshStatus();
             loadSyncStatus();
             // Refresh every 30 seconds
@@ -205,13 +218,13 @@
                 loadSyncStatus();
             }, 30000);
         });
-        
+
         async function refreshStatus() {
             try {
                 const response = await fetch('/health');
                 const status = response.ok ? 'Healthy' : 'Unhealthy';
                 const statusClass = response.ok ? 'status-healthy' : 'status-error';
-                
+
                 document.getElementById('system-status').innerHTML = `
                     <div><span class="status-indicator ${statusClass}"></span>API Status: ${status}</div>
                     <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
@@ -225,21 +238,21 @@
                 `;
             }
         }
-        
+
         async function loadSyncStatus() {
             try {
                 const response = await fetch(`${API_BASE}/sync/status`);
                 const data = await response.json();
-                
+
                 if (data.length === 0) {
                     document.getElementById('sync-status').innerHTML = '<p>No sync data available</p>';
                     return;
                 }
-                
+
                 let html = '<table><tr><th>Node</th><th>Table</th><th>Status</th><th>Last Sync</th></tr>';
                 data.forEach(item => {
-                    const statusClass = item.sync_status === 'SUCCESS' ? 'status-healthy' : 
-                                      item.sync_status === 'FAILED' ? 'status-error' : 'status-warning';
+                    const statusClass = item.sync_status === 'SUCCESS' ? 'status-healthy' :
+                        item.sync_status === 'FAILED' ? 'status-error' : 'status-warning';
                     html += `
                         <tr>
                             <td>${item.node_id}</td>
@@ -250,13 +263,13 @@
                     `;
                 });
                 html += '</table>';
-                
+
                 document.getElementById('sync-status').innerHTML = html;
             } catch (error) {
                 document.getElementById('sync-status').innerHTML = '<div class="error">Failed to load sync status</div>';
             }
         }
-        
+
         async function triggerSync() {
             try {
                 const response = await fetch(`${API_BASE}/sync/trigger`, { method: 'POST' });
@@ -267,17 +280,17 @@
                 alert('Failed to trigger sync');
             }
         }
-        
+
         async function importUsers() {
             const fileInput = document.getElementById('csv-file');
             if (!fileInput.files[0]) {
                 alert('Please select a CSV file');
                 return;
             }
-            
+
             const formData = new FormData();
             formData.append('file', fileInput.files[0]);
-            
+
             try {
                 const response = await fetch(`${API_BASE}/users/import`, {
                     method: 'POST',
@@ -290,26 +303,26 @@
                 alert('Failed to import users');
             }
         }
-        
+
         function showAddUserForm() {
             document.getElementById('userModal').style.display = 'block';
         }
-        
+
         function closeUserModal() {
             document.getElementById('userModal').style.display = 'none';
             document.getElementById('addUserForm').reset();
         }
-        
-        document.getElementById('addUserForm').addEventListener('submit', async function(e) {
+
+        document.getElementById('addUserForm').addEventListener('submit', async function (e) {
             e.preventDefault();
-            
+
             const userData = {
                 rfid_tag: document.getElementById('rfid-tag').value,
                 name: document.getElementById('user-name').value || null,
                 nic: document.getElementById('user-nic').value || null,
                 user_type: document.getElementById('user-type').value
             };
-            
+
             try {
                 const response = await fetch(`${API_BASE}/users`, {
                     method: 'POST',
@@ -317,7 +330,7 @@
                     body: JSON.stringify(userData)
                 });
                 const result = await response.json();
-                
+
                 if (result.success) {
                     alert('User added successfully');
                     closeUserModal();
@@ -328,18 +341,19 @@
                 alert('Failed to add user');
             }
         });
-        
+
         function viewUsers() {
             // This would typically open a new page or modal with user list
             window.open(`${API_BASE}/users`, '_blank');
         }
-        
+
         // Close modal when clicking outside
-        document.getElementById('userModal').addEventListener('click', function(e) {
+        document.getElementById('userModal').addEventListener('click', function (e) {
             if (e.target === this) {
                 closeUserModal();
             }
         });
     </script>
 </body>
+
 </html>
