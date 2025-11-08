@@ -4,7 +4,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .config import config
-from .api.routes import scan_router, users_router, sync_router
+from .api.routes.scan import router as scan_router
+from .api.routes.users import router as users_router
+from .api.routes.sync import router as sync_router
 from .workers.serial_worker import start_serial_worker
 
 def create_app() -> FastAPI:
@@ -54,6 +56,6 @@ if __name__ == "__main__":
         "app.main:app",
         host=config.API_HOST,
         port=config.API_PORT,
-        debug=config.API_DEBUG,
+        #debug=config.API_DEBUG,
         reload=config.API_DEBUG
     )

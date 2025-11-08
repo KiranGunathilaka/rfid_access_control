@@ -1,4 +1,3 @@
-
 # =======================================================================================
 # app/config.py - Configuration Management
 # =======================================================================================
@@ -7,6 +6,11 @@ from typing import Optional
 from dotenv import load_dotenv
 
 load_dotenv()
+
+def _env_int(name: str) -> Optional[int]:
+    """Helper to parse integer environment variables."""
+    v = os.getenv(name)
+    return int(v) if v and v.isdigit() else None
 
 class Config:
     # Database
@@ -18,7 +22,7 @@ class Config:
     API_PORT: int = int(os.getenv("API_PORT", "8000"))
     
     # Serial Communication
-    SERIAL_PORT: str = os.getenv("SERIAL_PORT", "")
+    SERIAL_PORT: str = os.getenv("SERIAL_PORT", "/dev/ttyACM0")
     SERIAL_BAUD: int = int(os.getenv("SERIAL_BAUD", "115200"))
     SERIAL_TIMEOUT: int = int(os.getenv("SERIAL_TIMEOUT", "1"))
     
@@ -35,10 +39,5 @@ class Config:
     # Sync Settings
     SYNC_RETRY_ATTEMPTS: int = int(os.getenv("SYNC_RETRY_ATTEMPTS", "3"))
     SYNC_RETRY_DELAY: int = int(os.getenv("SYNC_RETRY_DELAY", "5"))
-
-def _env_int(name: str) -> Optional[int]:
-    """Helper to parse integer environment variables."""
-    v = os.getenv(name)
-    return int(v) if v and v.isdigit() else None
 
 config = Config()

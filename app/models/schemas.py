@@ -46,9 +46,8 @@ class SyncStatusRow(BaseModel):
     minutes_since_sync: int
 
 class SerialMessage(BaseModel):
-    """Serial communication message model."""
-    t: str  # message type
-    id: Optional[str] = None
+    t: str
+    id: Optional[int] = None   
     mac: Optional[str] = None
     dev_id: Optional[int] = None
     uid: Optional[str] = None
