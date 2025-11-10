@@ -17,10 +17,11 @@ CREATE TABLE `devices` (
 );
 
 CREATE TABLE `booths` (
-    `id` INT PRIMARY KEY AUTO_INCREMENT,
-    `gate_id` INT NOT NULL,
-    `device_id` INT NOT NULL,
-    `is_active` BOOL
+  `id` INT PRIMARY KEY AUTO_INCREMENT,
+  `booth_name` VARCHAR(50),
+  `gate_id` INT NOT NULL,
+  `device_id` INT NOT NULL,
+  `is_active` BOOL
 );
 
 CREATE TABLE `nodes` (
@@ -223,6 +224,9 @@ BEGIN
 END//
 
 DELIMITER ;
+
+ALTER TABLE booths
+  ADD COLUMN booth_name VARCHAR(50) NULL AFTER id;
 
 -- ===============================
 -- Views

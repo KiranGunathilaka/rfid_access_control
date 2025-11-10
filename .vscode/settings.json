@@ -1,4 +1,21 @@
 {
     "python-envs.defaultEnvManager": "ms-python.python:system",
-    "python-envs.pythonProjects": []
+    "python-envs.pythonProjects": [],
+    "sqltools.connections": [
+        {
+            "mysqlOptions": {
+                "authProtocol": "default",
+                "enableSsl": "Disabled"
+            },
+            "ssh": "Disabled",
+            "previewLimit": 10,
+            "server": "192.168.10.2",
+            "port": 3306,
+            "driver": "MariaDB",
+            "name": "rfid",
+            "database": "rfid_access_control",
+            "username": "rfid_dev",
+            "askForPassword": true
+        }
+    ]
 }
