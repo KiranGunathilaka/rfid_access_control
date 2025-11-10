@@ -47,14 +47,15 @@ class SerialWorker:
             if config.API_DEBUG:
                 print("[serial] SERIAL_PORT not configured; skipping UART worker.")
             return False
-        
-        required_ids = [config.GATE_ID, config.BOOTH_ID, config.DEVICE_ID, config.NODE_ID]
+
+        required_ids = [config.GATE_ID, config.NODE_ID]
         if any(id is None for id in required_ids):
             if config.API_DEBUG:
-                print("[serial] Missing gate/booth/device/node IDs; skipping UART worker.")
+                print("[serial] Missing GATE_ID or NODE_ID; skipping UART worker.")
             return False
         
         return True
+
     
     def _run_loop(self):
         """Main serial communication loop."""

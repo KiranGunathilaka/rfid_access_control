@@ -1,10 +1,13 @@
 # =======================================================================================
 # app/utils/validators.py - Validation Helpers
 # =======================================================================================
+
+from typing import Tuple 
 from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from .exceptions import TopologyError, InvalidGateError
 from ..models.enums import GateType
+
 
 class TopologyValidator:
     """Validates system topology and relationships."""
@@ -72,3 +75,47 @@ class TopologyValidator:
             raise InvalidGateError("Invalid gate")
         
         return gate["type"]
+
+    @staticmethod
+    def resolve_booth_for_device_code(
+        conn: Connection,
+        gate_id: int,
+        dev_code: int,
+    ) -> Tuple[int, int]:
+        """
+        Resolve the numeric dev_code coming from ESP (e.g. 203, 101, …)
+        into (devices.id, booths.id) for this gate.
+
+        Assumes devices.device_id stores that code as a string ('203', '101', …).
+        Raises TopologyError if anything is misconfigured.
+        """
+        # 1) Resolve device
+        dev = conn.execute(
+            text("SELECT id, gate_id FROM devices WHERE device_id = :code"),
+            {"code": str(dev_code)},
+        ).mappings().first()
+
+        if not dev:
+            raise TopologyError(f"Device with code {dev_code} not found")
+
+        if dev["gate_id"] != gate_id:
+            raise TopologyError("Device not wired to this gate")
+
+        # 2) Resolve booth for this device at this gate
+        booth = conn.execute(
+            text(
+                "SELECT id, is_active "
+                "FROM booths "
+                "WHERE device_id = :did AND gate_id = :gid"
+            ),
+            {"did": dev["id"], "gid": gate_id},
+        ).mappings().first()
+
+        if not booth:
+            raise TopologyError("No booth configured for this device at this gate")
+
+        if not booth["is_active"]:
+            raise TopologyError("Booth for this device is inactive")
+
+        # returns (device_pk, booth_pk)
+        return dev["id"], booth["id"]
