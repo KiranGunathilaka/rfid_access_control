@@ -14,13 +14,13 @@ router = APIRouter()
 dashboard_service = DashboardService()
 
 
-@router.get("/analytics", response_model=AnalyticsResponse)
+@router.get("/admin/analytics", response_model=AnalyticsResponse)
 def get_analytics(conn: Connection = Depends(get_db_connection)):
     summary_dict = dashboard_service.get_summary(conn)
     return AnalyticsResponse(summary=Summary(**summary_dict))
 
 
-@router.get("/logs", response_model=LogsResponse)
+@router.get("/admin/logs", response_model=LogsResponse)
 def get_logs(conn: Connection = Depends(get_db_connection)):
     logs = dashboard_service.get_logs(conn)
     return LogsResponse(logs=logs)

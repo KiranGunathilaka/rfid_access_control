@@ -4,6 +4,7 @@
 
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import text
 from sqlalchemy.engine import Connection
 from ...models.schemas import AdminAuthRequest, AdminAuthResponse, AdminInfo
 from ...services.auth_service import AuthService
@@ -17,7 +18,7 @@ auth_service = AuthService()
 def register_admin(
     request: AdminAuthRequest, conn: Connection = Depends(get_db_connection)
 ):
-    # You might want to restrict this in production.
+    # restrict this in production.
     existing = conn.execute(
         text("SELECT id FROM admins WHERE username = :u"), {"u": request.username}
     ).first()

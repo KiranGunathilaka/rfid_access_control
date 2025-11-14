@@ -4,7 +4,7 @@
 import io
 import csv
 from typing import List
-from fastapi import APIRouter, HTTPException, Depends, UploadFile, File
+from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Query
 from sqlalchemy.engine import Connection
 from ...models.schemas import CreateUserRequest, CreateUserResponse
 from ...services.user_service import UserService
