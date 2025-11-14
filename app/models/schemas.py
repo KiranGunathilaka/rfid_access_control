@@ -3,10 +3,11 @@
 # app/models/schemas.py - Pydantic Models
 # =======================================================================================
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 from .enums import UserType, EventType, ResultType, SyncStatus
 
+# ========== Base Func + Logic ==========
 class ScanRequest(BaseModel):
     """RFID scan request model."""
     rfid_tag: str = Field(..., min_length=1, max_length=100, description="RFID tag identifier")
@@ -56,3 +57,101 @@ class SerialMessage(BaseModel):
     event: Optional[int] = None
     ticket: Optional[str] = None
     name: Optional[str] = None
+
+# ========== Admin Auth ==========
+
+class AdminAuthRequest(BaseModel):
+    username: str
+    password: str
+
+
+class AdminInfo(BaseModel):
+    id: int
+    username: str
+
+
+class AdminAuthResponse(BaseModel):
+    token: Optional[str] = None
+    message: Optional[str] = None
+    admin: Optional[AdminInfo] = None
+
+
+# ========== Health for dashboard ==========
+
+class HealthResponse(BaseModel):
+    status: str                 # "ok" | "error" | "offline"
+    dataAvailable: bool
+    message: Optional[str] = None
+
+
+# ========== Analytics ==========
+
+class Summary(BaseModel):
+    total_users: int
+    in_users: int
+    out_users: int
+    idle_users: int
+
+
+class AnalyticsResponse(BaseModel):
+    summary: Summary
+
+
+# ========== Logs ==========
+
+class LogUser(BaseModel):
+    id: int
+    name: Optional[str] = None
+    nic: Optional[str] = None
+    rfidTag: Optional[str] = None
+    status: Optional[str] = None
+    isActive: bool = True
+
+
+class LogItem(BaseModel):
+    id: int
+    userId: Optional[int] = None
+    eventType: str              # "IN" | "OUT" | "UNKNOWN"
+    gateLocation: str
+    deviceId: str
+    timestamp: datetime
+    result: str                 # "GRANTED" | "DENIED" | "UNKNOWN"
+    message: Optional[str] = ""
+    user: Optional[LogUser] = None
+
+
+class LogsResponse(BaseModel):
+    logs: List[LogItem]
+
+
+# ========== User search + update for modal ==========
+
+class SimpleUser(BaseModel):
+    id: int
+    name: Optional[str] = None
+    nic: Optional[str] = None
+    rfidTag: Optional[str] = None
+    status: Optional[str] = None
+    isActive: bool = True
+
+
+class UserSearchResponse(BaseModel):
+    success: bool
+    data: List[SimpleUser]
+
+
+class UserUpdateRequest(BaseModel):
+    # identifier
+    nic: Optional[str] = None
+    rfidTag: Optional[str] = None
+
+    # fields that can change
+    status: Optional[str] = Field(
+        None, description="IDLE | IN | OUT"
+    )
+    isActive: Optional[bool] = None
+    newRfidTag: Optional[str] = None
+
+class UserUpdateResponse(BaseModel):
+    success: bool
+    message: str
