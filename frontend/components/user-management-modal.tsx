@@ -26,6 +26,43 @@ interface UserUpdateRequest {
   rfidTag?: string
   status?: "IDLE" | "OUT" | "IN"
   isActive?: boolean
+  newRfidTag?: string
+}
+
+// derive active state from status + optional isActive flag
+const resolveIsActive = (user: any | null): boolean => {
+  if (!user) return false
+
+  const rawStatus = user.status ?? ""
+  const statusUpper = String(rawStatus).toUpperCase()
+
+  // Expired or Banned => always inactive
+  const derivedFromStatus = statusUpper !== "EXPIRED" && statusUpper !== "BANNED"
+
+  // if backend sent isActive, respect it but NEVER override Expired/Banned rule
+  if (typeof user.isActive === "boolean") {
+    return user.isActive && derivedFromStatus
+  }
+
+  return derivedFromStatus
+}
+
+const getStatusColor = (status: string) => {
+  const s = status.toUpperCase()
+  switch (s) {
+    case "IN":
+      return "bg-green-100 text-green-800 border-green-200"
+    case "OUT":
+      return "bg-red-100 text-red-800 border-red-200"
+    case "IDLE":
+      return "bg-yellow-100 text-yellow-800 border-yellow-200"
+    case "EXPIRED":
+      return "bg-purple-100 text-purple-800 border-purple-200"
+    case "BANNED":
+      return "bg-gray-200 text-gray-900 border-gray-300"
+    default:
+      return "bg-gray-100 text-gray-800 border-gray-200"
+  }
 }
 
 export default function UserManagementModal() {
@@ -37,24 +74,21 @@ export default function UserManagementModal() {
   // Status update form
   const [statusForm, setStatusForm] = useState({
     identifier: "",
-    // identifierType: "nic" as "nic" | "rfidTag",
-    identifierType: "rfidTag",
+    identifierType: "rfidTag" as "nic" | "rfidTag",
     status: "" as "IDLE" | "OUT" | "IN" | "",
   })
 
   // Active status update form
   const [activeForm, setActiveForm] = useState({
     identifier: "",
-    // identifierType: "nic" as "nic" | "rfidTag",
-    identifierType: "rfidTag",
+    identifierType: "rfidTag" as "nic" | "rfidTag",
     isActive: "" as "true" | "false" | "",
   })
 
   // RFID update form
   const [rfidForm, setRfidForm] = useState({
     identifier: "",
-    // identifierType: "nic" as "nic" | "rfidTag",
-    identifierType: "rfidTag",
+    identifierType: "rfidTag" as "nic" | "rfidTag",
     newRfidTag: "",
   })
 
@@ -136,7 +170,7 @@ export default function UserManagementModal() {
     }
   }
 
-  // Debounced search functions
+  // Debounced search
   const debouncedSearchUser = debounce(searchUser, 500)
 
   const updateUser = async (data: UserUpdateRequest) => {
@@ -150,8 +184,7 @@ export default function UserManagementModal() {
         throw new Error("No authentication token found")
       }
 
-      // const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/user/update`, {
-      const response = await fetch('http://spotseeker-backend-env.eba-s3z34pvy.ap-south-1.elasticbeanstalk.com/api/user/update', {
+      const response = await fetch(apiUrls.userUpdate(), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -162,12 +195,13 @@ export default function UserManagementModal() {
 
       const result = await response.json()
 
-      if (response.ok) {
+      if (response.ok && result.success) {
         setSuccess(`User updated successfully!`)
-        // Reset forms and search results
-        setStatusForm({ identifier: "", identifierType: "nic", status: "" })
-        setActiveForm({ identifier: "", identifierType: "nic", isActive: "" })
-        setRfidForm({ identifier: "", identifierType: "nic", newRfidTag: "" })
+
+        // Reset forms and search results - default back to RFID
+        setStatusForm({ identifier: "", identifierType: "rfidTag", status: "" })
+        setActiveForm({ identifier: "", identifierType: "rfidTag", isActive: "" })
+        setRfidForm({ identifier: "", identifierType: "rfidTag", newRfidTag: "" })
         setSearchResults({
           status: { user: null, loading: false, error: "" },
           active: { user: null, loading: false, error: "" },
@@ -231,29 +265,16 @@ export default function UserManagementModal() {
     }
 
     const updateData: UserUpdateRequest = {
-      rfidTag: rfidForm.newRfidTag,
+      newRfidTag: rfidForm.newRfidTag,
     }
 
     if (rfidForm.identifierType === "nic") {
-      updateData.nic = rfidForm.identifier
+      updateData.nic = rfidForm.identifier       // identify by NIC
     } else {
-      updateData.rfidTag = rfidForm.identifier
+      updateData.rfidTag = rfidForm.identifier   // identify by current RFID
     }
 
     await updateUser(updateData)
-  }
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case "IN":
-        return "bg-green-100 text-green-800 border-green-200"
-      case "OUT":
-        return "bg-red-100 text-red-800 border-red-200"
-      case "IDLE":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200"
-      default:
-        return "bg-gray-100 text-gray-800 border-gray-200"
-    }
   }
 
   return (
@@ -294,20 +315,6 @@ export default function UserManagementModal() {
               <AlertDescription className="text-green-800">{success}</AlertDescription>
             </Alert>
           )}
-
-          {/* Status Reference Card */}
-          {/* <Card className="bg-gradient-to-r from-slate-50 to-blue-50/50 border-0 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-medium text-gray-700">Status Reference</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="flex flex-wrap gap-2">
-                <Badge className={getStatusColor("IN")}>IN</Badge>
-                <Badge className={getStatusColor("OUT")}>OUT</Badge>
-                <Badge className={getStatusColor("IDLE")}>IDLE</Badge>
-              </div>
-            </CardContent>
-          </Card> */}
 
           {/* Tabs for different update types */}
           <Tabs defaultValue="status" className="w-full">
@@ -398,20 +405,20 @@ export default function UserManagementModal() {
                       </div>
                     )}
                     {searchResults.status.user && (
-                    <div
+                      <div
                         className={`flex items-center p-3 border rounded-md ${
-                          searchResults.status.user.isActive
+                          resolveIsActive(searchResults.status.user)
                             ? "bg-green-50 border-green-200"
                             : "bg-red-50 border-red-200"
                         }`}
                       >
-                        {searchResults.status.user.isActive ? (
+                        {resolveIsActive(searchResults.status.user) ? (
                           <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600 mr-2" />
                         )}
                         <div>
-                          {searchResults.status.user.isActive ? (
+                          {resolveIsActive(searchResults.status.user) ? (
                             <p className="text-xs text-green-600">
                               Status: {searchResults.status.user.status} | Active: Yes
                             </p>
@@ -546,20 +553,20 @@ export default function UserManagementModal() {
                       </div>
                     )}
                     {searchResults.active.user && (
-                    <div
+                      <div
                         className={`flex items-center p-3 border rounded-md ${
-                          searchResults.active.user.isActive
+                          resolveIsActive(searchResults.active.user)
                             ? "bg-green-50 border-green-200"
                             : "bg-red-50 border-red-200"
                         }`}
                       >
-                        {searchResults.active.user.isActive ? (
+                        {resolveIsActive(searchResults.active.user) ? (
                           <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600 mr-2" />
                         )}
                         <div>
-                          {searchResults.active.user.isActive ? (
+                          {resolveIsActive(searchResults.active.user) ? (
                             <p className="text-xs text-green-600">
                               Status: {searchResults.active.user.status} | Active: Yes
                             </p>
@@ -686,18 +693,18 @@ export default function UserManagementModal() {
                     {searchResults.rfid.user && (
                       <div
                         className={`flex items-center p-3 border rounded-md ${
-                          searchResults.rfid.user.isActive
+                          resolveIsActive(searchResults.rfid.user)
                             ? "bg-green-50 border-green-200"
                             : "bg-red-50 border-red-200"
                         }`}
                       >
-                        {searchResults.rfid.user.isActive ? (
+                        {resolveIsActive(searchResults.rfid.user) ? (
                           <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
                         ) : (
                           <XCircle className="h-4 w-4 text-red-600 mr-2" />
                         )}
                         <div>
-                          {searchResults.rfid.user.isActive ? (
+                          {resolveIsActive(searchResults.rfid.user) ? (
                             <p className="text-xs text-green-600">
                               Current RFID: {searchResults.rfid.user.rfidTag || "None"} | Active: Yes
                             </p>

@@ -211,14 +211,14 @@ function DashboardContent() {
   const [currentPage, setCurrentPage] = useState(1)
 
   // Check authentication on mount
-  // useEffect(() => {
-  //   const token = localStorage.getItem("adminToken")
-  //   if (!token) {
-  //     window.location.href = "/"
-  //     return
-  //   }
-  //   setIsAuthenticated(true)
-  // }, [])
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken")
+    if (!token) {
+      window.location.href = "/"
+      return
+    }
+    setIsAuthenticated(true)
+  }, [])
 
   // SWR hooks for real-time data
   const {
@@ -414,16 +414,16 @@ function DashboardContent() {
     return pages
   }
 
-  // if (!isAuthenticated) {
-  //   return (
-  //     <div className="min-h-screen bg-white flex items-center justify-center">
-  //       <div className="text-center">
-  //         <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800 mx-auto mb-4"></div>
-  //         <p className="text-slate-700 font-medium text-lg">Loading dashboard...</p>
-  //       </div>
-  //     </div>
-  //   )
-  // }
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-slate-800 mx-auto mb-4"></div>
+          <p className="text-slate-700 font-medium text-lg">Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen bg-white">
