@@ -76,3 +76,15 @@ INSERT INTO users (rfid_tag, name, nic, user_type) VALUES
   ('0438864388', 'Kasun Perera',   '900000000V', 'Common'),
   ('2886066914', 'Nimali Silva',   '910000000V', 'Common'),
   ('2885779586', 'Ishan Fernando', '920000000V', 'Common');
+
+INSERT INTO gates (gate_name, type) VALUES
+  ('ADMIN', 'Common_IN');
+
+INSERT INTO devices (device_id, gate_id, rfid_mac) VALUES
+  ('301', 7,  '00:00:00:00:00:00');
+
+INSERT INTO booths (booth_name, gate_id, device_id, is_active) VALUES
+  ('ADMIN', 7, 13, 1);
+
+INSERT INTO nodes (gate_id, IP, esp_mac, node_name) VALUES
+  (7, '0.0.0.0', '00:00:00:00:00:00', 'ADMIN_NODE');

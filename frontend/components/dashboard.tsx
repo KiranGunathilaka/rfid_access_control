@@ -293,7 +293,7 @@ function DashboardContent() {
         "S.No": index + 1,
         "RFID Tag": log.user?.rfidTag ?? "N/A",
         "User Status": log.user?.status ?? "N/A",
-        "Event Type": log.eventType === "IN" ? "ENTRY" : "EXIT",
+        "Event Type": log.eventType === "IN" ? "ENTRY" : log.eventType === "OUT" ? "EXIT" : "OTHER",
         "Gate Location": log.gateLocation,
         "Device ID": log.deviceId,
         "Access Result": log.result,
@@ -703,7 +703,7 @@ function DashboardContent() {
 
                         {/* Event Type */}
                         <div className="col-span-1 flex justify-center items-center h-full">
-                          <p>{log.eventType === "IN" ? "ENTRY" : "EXIT"}</p>
+                          <p>{log.eventType === "IN" ? "ENTRY" : log.eventType === "OUT" ? "EXIT" : "OTHER"}</p>
                         </div>
 
                         {/* Location */}
