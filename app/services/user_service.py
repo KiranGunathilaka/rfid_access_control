@@ -11,6 +11,15 @@ from ..models.schemas import CreateUserRequest, CreateUserResponse
 from ..config import config
 from ..models.schemas import UserUpdateRequest, UserUpdateResponse
 
+# Entire thing is freaking messy cuz the front end and previous implementation isn't mine. By the time I received frontend
+# I had implemented databases and everything
+
+# Change these if DB cleared and setuped again
+ADMIN_GATE_ID = 7
+ADMIN_BOOTH_ID = 13
+ADMIN_NODE_ID = 5
+
+
 class UserService:
     """Handles user management operations."""
 
@@ -183,7 +192,7 @@ class UserService:
             )
         return results
 
-    # -------------- manual override used by UserManagementModal -------------- #
+    # -------------- manual override used by UserManagementModal -------------- 
     def update_user_manual(
         self, conn: Connection, req: UserUpdateRequest
     ) -> UserUpdateResponse:
@@ -193,6 +202,12 @@ class UserService:
         isActive is mapped to status:
         - isActive = False -> status = 'Banned'
         - isActive = True  -> if currently inactive (Banned/Expired), set 'IDLE'
+
+        Also logs an admin entry in `logs` that reflects the resulting status:
+        - In  -> event_type = 'ENTRY', result = 'PASS'
+        - Out -> event_type = 'EXIT',  result = 'PASS'
+        - IDLE -> event_type = 'ENTRY', result = 'PASS' (neutral reset, explained in message)
+        - Banned/Expired -> event_type = 'DENIED', result = 'FAIL'
         """
         # --- identify user ---
         if not req.nic and not req.rfidTag:
@@ -212,7 +227,7 @@ class UserService:
         user = conn.execute(
             text(
                 f"""
-                SELECT id, status, rfid_tag
+                SELECT id, status, rfid_tag, user_type
                 FROM users
                 WHERE {" OR ".join(where_clauses)}
                 LIMIT 1
@@ -224,9 +239,13 @@ class UserService:
         if not user:
             return UserUpdateResponse(success=False, message="User not found")
 
-        current_status: str = user["status"]
+        user_id: int = user["id"]
+        current_status: str = user["status"]   # DB status: 'IDLE', 'In', 'Out', 'Expired', 'Banned'
+        current_rfid: str = user["rfid_tag"]
+        user_type = user["user_type"]
+
         fields_to_set: List[str] = []
-        update_params: Dict[str, Any] = {"id": user["id"]}
+        update_params: Dict[str, Any] = {"id": user_id}
 
         # --- 1) explicit status update from Status tab (IN/OUT/IDLE) ---
         if req.status is not None:
@@ -249,7 +268,7 @@ class UserService:
             if desired_active == currently_active and not req.newRfidTag:
                 return UserUpdateResponse(success=True, message="No changes required")
 
-            # Active -> Inactive → Banned
+            # Active -> Inactive → Banned (admin ban, not expire)
             if not desired_active and currently_active:
                 fields_to_set.append("status = :status")
                 update_params["status"] = "Banned"
@@ -267,6 +286,7 @@ class UserService:
         if not fields_to_set:
             return UserUpdateResponse(success=True, message="No fields to update")
 
+        # --- apply update ---
         conn.execute(
             text(
                 f"""
@@ -276,6 +296,68 @@ class UserService:
                 """
             ),
             update_params,
+        )
+
+        # --- figure out final status after update (for logging) ---
+        new_status_db = current_status
+        if "status" in update_params:
+            new_status_db = update_params["status"]
+
+        # Map final DB status -> event_type + result for logs
+        if new_status_db == "In":
+            event_type = "ENTRY"
+            result = "PASS"
+        elif new_status_db == "Out":
+            event_type = "EXIT"
+            result = "PASS"
+        elif new_status_db == "IDLE":
+            # Neutral reset – still successful, just reset to idle
+            event_type = "ENTRY"
+            result = "PASS"
+        elif new_status_db in ("Banned", "Expired"):
+            event_type = "DENIED"
+            result = "FAIL"
+        else:
+            # Fallback, should not really happen
+            event_type = "ENTRY"
+            result = "PASS"
+
+        # --- build human-readable change description ---
+        changes: List[str] = []
+
+        if "status" in update_params:
+            changes.append(f"status {current_status} -> {new_status_db}")
+
+        # We still record that admin toggled active, even though it’s encoded in status
+        if req.isActive is not None:
+            changes.append(f"isActive set to {req.isActive}")
+
+        if "new_rfid" in update_params:
+            changes.append(f"RFID {current_rfid} -> {update_params['new_rfid']}")
+
+        if not changes:
+            log_message = "User updated via admin panel"
+        else:
+            log_message = "; ".join(changes)
+
+        # --- write log entry for admin action ---
+        conn.execute(
+            text(
+                """
+                INSERT INTO logs (user_id, user_type, event_type, gate_id, booth_id, result, message, node_id)
+                VALUES (:uid, :ut, :evt, :gate, :booth, :res, :msg, :node)
+                """
+            ),
+            {
+                "uid": user_id,
+                "ut": user_type,
+                "evt": event_type,
+                "gate": ADMIN_GATE_ID,
+                "booth": ADMIN_BOOTH_ID,
+                "res": result,
+                "msg": log_message,
+                "node": ADMIN_NODE_ID,
+            },
         )
 
         return UserUpdateResponse(success=True, message="User updated successfully")
