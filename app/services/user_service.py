@@ -16,19 +16,40 @@ class UserService:
 
     # ----------------- helper -----------------
     # this is to derive isActive from UserStatus (previous implementation had seperate coulm/ mine has Banned status in the userStatus)
-
     @staticmethod
     def is_active_from_status(status: str | None) -> bool:
-        # Your rule: ONLY 'Banned' means inactive
-        return status != "Banned"
+        """
+        Consider 'Banned' and 'Expired' as inactive.
+        Everything else (IDLE, In, Out) is active.
+        """
+        if status is None:
+            return False
+        status = status.strip()
+        return status not in ("Banned", "Expired")
 
     @staticmethod
     def normalize_status_for_ui(status: str | None) -> str | None:
+        """
+        Map DB enum values -> consistent uppercase string for frontend:
+        IDLE, IN, OUT, EXPIRED, BANNED
+        """
         if status is None:
             return None
+
         status = status.strip()
-        if status in ("In", "Out"):
-            return status.upper()
+
+        if status == "In":
+            return "IN"
+        if status == "Out":
+            return "OUT"
+        if status == "IDLE":
+            return "IDLE"
+        if status == "Expired":
+            return "EXPIRED"
+        if status == "Banned":
+            return "BANNED"
+
+        # fallback just in case
         return status.upper()
 
     
@@ -119,7 +140,6 @@ class UserService:
         Search by NIC or RFID tag.
         Returns list of dicts that will be turned into SimpleUser.
         """
-        # First: exact NIC/RFID match
         rows = conn.execute(
             text(
                 """
@@ -133,7 +153,6 @@ class UserService:
             {"q": query},
         ).mappings().all()
 
-        # Fallback: partial match
         if not rows:
             like = f"%{query}%"
             rows = conn.execute(
@@ -165,15 +184,15 @@ class UserService:
         return results
 
     # -------------- manual override used by UserManagementModal -------------- #
-
     def update_user_manual(
         self, conn: Connection, req: UserUpdateRequest
     ) -> UserUpdateResponse:
         """
-        Manual override for status / active state / (optionally) RFID.
+        Manual override for status / active state / RFID.
+
         isActive is mapped to status:
-          - isActive = False -> status = 'Banned'
-          - isActive = True  -> if currently 'Banned', set 'IDLE'
+        - isActive = False -> status = 'Banned'
+        - isActive = True  -> if currently inactive (Banned/Expired), set 'IDLE'
         """
         # --- identify user ---
         if not req.nic and not req.rfidTag:
@@ -181,9 +200,11 @@ class UserService:
 
         where_clauses = []
         params: Dict[str, Any] = {}
+
         if req.nic:
             where_clauses.append("nic = :nic")
             params["nic"] = req.nic
+
         if req.rfidTag:
             where_clauses.append("rfid_tag = :rfid")
             params["rfid"] = req.rfidTag
@@ -209,7 +230,6 @@ class UserService:
 
         # --- 1) explicit status update from Status tab (IN/OUT/IDLE) ---
         if req.status is not None:
-            # Frontend sends "IN" | "OUT" | "IDLE"
             s = req.status.upper()
             if s == "IN":
                 db_status = "In"
@@ -221,26 +241,25 @@ class UserService:
             fields_to_set.append("status = :status")
             update_params["status"] = db_status
 
-        # --- 2) active toggle from Active tab (only if status NOT already being set) ---
+        # --- 2) active toggle from Active tab ---
         elif req.isActive is not None:
             desired_active = bool(req.isActive)
             currently_active = self.is_active_from_status(current_status)
 
-            # nothing to change
-            if desired_active == currently_active:
+            if desired_active == currently_active and not req.newRfidTag:
                 return UserUpdateResponse(success=True, message="No changes required")
 
-            # Active -> Inactive → status = 'Banned'
+            # Active -> Inactive → Banned
             if not desired_active and currently_active:
                 fields_to_set.append("status = :status")
                 update_params["status"] = "Banned"
 
-            # Inactive -> Active → if 'Banned', set 'IDLE'
+            # Inactive (Banned/Expired) -> Active → IDLE
             elif desired_active and not currently_active:
                 fields_to_set.append("status = :status")
                 update_params["status"] = "IDLE"
 
-        # --- 3) RFID change (optional for later, if you wire frontend) ---
+        # --- 3) RFID change (optional) ---
         if getattr(req, "newRfidTag", None):
             fields_to_set.append("rfid_tag = :new_rfid")
             update_params["new_rfid"] = req.newRfidTag
